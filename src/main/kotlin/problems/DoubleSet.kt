@@ -1,58 +1,70 @@
 package problems
 
-data class Member(val value: Int, var count: Int) {
+import java.util.*
+
+/**
+ * A DoubleSet is a collection whose members are integers, and who can have one or two of each member.
+ *
+ * DoubleSet is initialized with variable arguments like other Kotlin Collections, and is backed by
+ * a MutableMap. It supports add and subtract operations for Int members and other DoubleSets.
+ */
+class DoubleSet(vararg members: Int) {
+    private var memberMap: MutableMap<Int, Int> = mutableMapOf()
+
+    /**
+     * When this class is constructed, add members into the backing map
+     */
     init {
-        if (count <= 0 || count > 2) throw Exception("A member must have 0 < count <= 2")
+        members.forEach {
+            this.plus(it)
+        }
     }
-}
 
-// todo: make toString overrides that use correct kinds of brackets
-// todo: does it make sense to implement this as a map internally? that way we can get O(1) on plus/minus...
-// nah, b/c means read operations will be O(n), or it'll take 2x space
-// todo: should we take a vararg instead of members?
-data class DoubleSet(val members: MutableList<Member> = mutableListOf()) {
-    operator fun plus(member: Member): DoubleSet {
-        var exists = false
-        members.forEachIndexed { i, m ->
-            if (m.value == member.value) {
-                try {
-                    members[i] = m.copy(count = m.count + member.count)
-                } catch (e: Exception) {
-                    members[i] = m.copy(count = 2)
-                }
-                exists = true
-            }
+    /**
+     * Convert the map into a list of members corresponding with the count of each member
+     */
+    fun flatten(): List<Int> {
+        return memberMap.toList().flatMap {
+            Collections.nCopies(it.second, it.first)
         }
-        if (!exists) {
-            members += member
-        }
+    }
+
+    /**
+     * Add a member
+     */
+    operator fun plus(value: Int): DoubleSet {
+        memberMap[value] = if (memberMap[value] != null) 2 else 1
         return this
     }
 
-    operator fun plus(doubleSet: DoubleSet): DoubleSet {
-        doubleSet.members.forEach {this.plus(it)}
-        return this
-    }
-
-    operator fun minus(member: Member): DoubleSet {
-        var memberToDelete: Member? = null
-        members.forEachIndexed { i, m ->
-            if (m.value == member.value) {
-                try {
-                    members[i] = m.copy(count = m.count - member.count)
-                } catch (e: Exception) {
-                    memberToDelete = m
-                }
-            }
-        }
-        memberToDelete?.let {
-            members -= it
+    /**
+     * Subtract a member
+     */
+    operator fun minus(value: Int): DoubleSet {
+        if (memberMap[value] == 1) {
+            memberMap.remove(value)
+        } else if (memberMap[value] == 2) {
+            memberMap[value] = 1
         }
         return this
     }
 
-    operator fun minus(doubleSet: DoubleSet): DoubleSet {
-        doubleSet.members.forEach {this.minus(it)}
+    /**
+     * Add a DoubleSet to this DoubleSet
+     */
+    operator fun plus(ds: DoubleSet): DoubleSet {
+        ds.flatten().forEach {this.plus(it)}
         return this
     }
+
+    /**
+     * Subtract a DoubleSet from this DoubleSet
+     */
+    operator fun minus(ds: DoubleSet): DoubleSet {
+        ds.flatten().forEach {this.minus(it)}
+        return this
+    }
+
+    override fun toString(): String =
+        memberMap.toList().map { "{${it.first}: ${it.second}}" }.toString()
 }
